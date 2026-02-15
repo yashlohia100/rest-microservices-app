@@ -6,6 +6,35 @@ import { prisma } from './database/prisma.js';
 const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL;
 const SALT_ROUNDS = 10;
 
+// GET /api/users/:userId - Get user by ID (used by other microservices)
+export const getUserById = async (req: Request, res: Response) => {
+  try {
+    const userId = req.params.userId as string;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    // Return user info without the password
+    res.status(200).json({
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        createdAt: user.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    res.status(500).json({ error: 'Failed to fetch user' });
+  }
+};
+
 export const signup = async (req: Request, res: Response) => {
   try {
     const { name, email, password } = req.body;
