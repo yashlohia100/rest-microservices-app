@@ -6,6 +6,41 @@ import { POSTS_COLLECTION } from './typesense/posts.collection.js';
 
 const USER_SERVICE_URL = process.env.USER_SERVICE_URL;
 
+// GET /api/posts/search - Search posts via Typesense
+export const searchPosts = async (req: Request, res: Response) => {
+  try {
+    const q = (req.query.q as string) || '*';
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const perPage = Math.min(100, Math.max(1, Number(req.query.per_page) || 10));
+
+    const results = await typesenseClient
+      .collections(POSTS_COLLECTION)
+      .documents()
+      .search({
+        q,
+        query_by: 'title,content,authorName',
+        filter_by: 'published:true',
+        sort_by: 'createdAt:desc',
+        page,
+        per_page: perPage,
+        highlight_full_fields: 'title,content',
+      });
+
+    res.status(200).json({
+      query: q,
+      found: results.found,
+      page: results.page,
+      hits: results.hits?.map((hit) => ({
+        document: hit.document,
+        highlights: hit.highlights,
+      })),
+    });
+  } catch (error) {
+    console.error('Error searching posts:', error);
+    res.status(500).json({ error: 'Failed to search posts' });
+  }
+};
+
 // GET /api/posts - Get all published posts
 export const getAllPosts = async (req: Request, res: Response) => {
   try {

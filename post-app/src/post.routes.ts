@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   getAllPosts,
+  searchPosts,
   getPost,
   createPost,
   updatePost,
@@ -11,6 +12,7 @@ import { authMiddleware } from './auth.middleware.js';
 const postRouter = Router();
 
 // Public routes
+postRouter.get('/search', searchPosts);
 postRouter.get('/', getAllPosts);
 postRouter.get('/:postId', getPost);
 
