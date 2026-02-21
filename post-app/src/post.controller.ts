@@ -3,8 +3,11 @@ import axios from 'axios';
 import { prisma } from './database/prisma.js';
 import { typesenseClient } from './typesense/client.js';
 import { POSTS_COLLECTION } from './typesense/posts.collection.js';
+import { redis } from './redis/client.js';
 
 const USER_SERVICE_URL = process.env.USER_SERVICE_URL;
+const ALL_POSTS_CACHE_KEY = 'posts:all';
+const CACHE_TTL_SECONDS = 60;
 
 // GET /api/posts/search - Search posts via Typesense
 export const searchPosts = async (req: Request, res: Response) => {
@@ -41,15 +44,29 @@ export const searchPosts = async (req: Request, res: Response) => {
   }
 };
 
-// GET /api/posts - Get all published posts
+// GET /api/posts - Get all published posts (cached)
 export const getAllPosts = async (req: Request, res: Response) => {
   try {
+    // Check cache first
+    const cached = await redis.get(ALL_POSTS_CACHE_KEY);
+    if (cached) {
+      res.status(200).json(JSON.parse(cached));
+      return;
+    }
+
     const posts = await prisma.post.findMany({
       where: { published: true },
       orderBy: { createdAt: 'desc' },
     });
 
-    res.status(200).json({ posts });
+    const responseBody = { posts };
+
+    // Store in cache with TTL
+    await redis.set(ALL_POSTS_CACHE_KEY, JSON.stringify(responseBody), {
+      EX: CACHE_TTL_SECONDS,
+    });
+
+    res.status(200).json(responseBody);
   } catch (error) {
     console.error('Error fetching posts:', error);
     res.status(500).json({ error: 'Failed to fetch posts' });
@@ -142,6 +159,8 @@ export const createPost = async (req: Request, res: Response) => {
       console.warn('Failed to sync post to Typesense:', tsError);
     }
 
+    await redis.del(ALL_POSTS_CACHE_KEY);
+
     res.status(201).json({ post });
   } catch (error) {
     console.error('Error creating post:', error);
@@ -197,6 +216,8 @@ export const updatePost = async (req: Request, res: Response) => {
       console.warn('Failed to sync post update to Typesense:', tsError);
     }
 
+    await redis.del(ALL_POSTS_CACHE_KEY);
+
     res.status(200).json({ post });
   } catch (error) {
     console.error('Error updating post:', error);
@@ -238,6 +259,8 @@ export const deletePost = async (req: Request, res: Response) => {
     } catch (tsError) {
       console.warn('Failed to sync post deletion to Typesense:', tsError);
     }
+
+    await redis.del(ALL_POSTS_CACHE_KEY);
 
     res.status(204).send();
   } catch (error) {

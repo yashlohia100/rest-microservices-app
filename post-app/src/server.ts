@@ -1,6 +1,7 @@
 import { app } from './app.js';
 import { connectToDatabase } from './database/connectToDatabase.js';
 import { prisma } from './database/prisma.js';
+import { redis } from './redis/client.js';
 import { initPostsCollection } from './typesense/posts.collection.js';
 
 const port = process.env.PORT || 8080;
@@ -8,6 +9,8 @@ const port = process.env.PORT || 8080;
 async function start() {
   try {
     await connectToDatabase();
+    await redis.connect();
+    console.log('Redis connected...');
     await initPostsCollection();
 
     app.listen(port, () => {
@@ -23,6 +26,7 @@ start();
 
 async function shutdown() {
   console.log('Shutting down...');
+  await redis.quit();
   await prisma.$disconnect();
   process.exit(0);
 }
