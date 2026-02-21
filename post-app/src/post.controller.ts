@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import axios from 'axios';
 import { prisma } from './database/prisma.js';
+import { typesenseClient } from './typesense/client.js';
+import { POSTS_COLLECTION } from './typesense/posts.collection.js';
 
 const USER_SERVICE_URL = process.env.USER_SERVICE_URL;
 
@@ -76,6 +78,35 @@ export const createPost = async (req: Request, res: Response) => {
       },
     });
 
+    // Sync to Typesense
+    try {
+      let authorName: string | undefined;
+      try {
+        const userResponse = await axios.get(
+          `${USER_SERVICE_URL}/api/users/${authorId}`,
+        );
+        authorName = userResponse.data.user.name;
+      } catch {
+        console.warn('Could not fetch author name for Typesense sync');
+      }
+
+      await typesenseClient
+        .collections(POSTS_COLLECTION)
+        .documents()
+        .upsert({
+          id: post.id,
+          title: post.title,
+          content: post.content,
+          published: post.published,
+          authorId: post.authorId,
+          ...(authorName && { authorName }),
+          createdAt: post.createdAt.getTime(),
+          updatedAt: post.updatedAt.getTime(),
+        });
+    } catch (tsError) {
+      console.warn('Failed to sync post to Typesense:', tsError);
+    }
+
     res.status(201).json({ post });
   } catch (error) {
     console.error('Error creating post:', error);
@@ -116,6 +147,21 @@ export const updatePost = async (req: Request, res: Response) => {
       },
     });
 
+    // Sync to Typesense
+    try {
+      await typesenseClient
+        .collections(POSTS_COLLECTION)
+        .documents(postId)
+        .update({
+          ...(title !== undefined && { title }),
+          ...(content !== undefined && { content }),
+          ...(published !== undefined && { published }),
+          updatedAt: post.updatedAt.getTime(),
+        });
+    } catch (tsError) {
+      console.warn('Failed to sync post update to Typesense:', tsError);
+    }
+
     res.status(200).json({ post });
   } catch (error) {
     console.error('Error updating post:', error);
@@ -147,6 +193,16 @@ export const deletePost = async (req: Request, res: Response) => {
     await prisma.post.delete({
       where: { id: postId },
     });
+
+    // Sync to Typesense
+    try {
+      await typesenseClient
+        .collections(POSTS_COLLECTION)
+        .documents(postId)
+        .delete();
+    } catch (tsError) {
+      console.warn('Failed to sync post deletion to Typesense:', tsError);
+    }
 
     res.status(204).send();
   } catch (error) {

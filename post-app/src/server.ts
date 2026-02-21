@@ -1,12 +1,14 @@
 import { app } from './app.js';
 import { connectToDatabase } from './database/connectToDatabase.js';
 import { prisma } from './database/prisma.js';
+import { initPostsCollection } from './typesense/posts.collection.js';
 
 const port = process.env.PORT || 8080;
 
 async function start() {
   try {
     await connectToDatabase();
+    await initPostsCollection();
 
     app.listen(port, () => {
       console.log(`Server is listening on port ${port}...`);
