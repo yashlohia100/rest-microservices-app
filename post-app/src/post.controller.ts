@@ -1,20 +1,51 @@
-import { Request, Response } from 'express';
 import axios from 'axios';
+import { Request, Response } from 'express';
 import { prisma } from './database/prisma.js';
+import { redis } from './redis/client.js';
 import { typesenseClient } from './typesense/client.js';
 import { POSTS_COLLECTION } from './typesense/posts.collection.js';
-import { redis } from './redis/client.js';
 
 const USER_SERVICE_URL = process.env.USER_SERVICE_URL;
 const ALL_POSTS_CACHE_KEY = 'posts:all';
 const CACHE_TTL_SECONDS = 60;
 
-// GET /api/posts/search - Search posts via Typesense
+async function invalidatePostCaches(postId?: string) {
+  const keys: string[] = [ALL_POSTS_CACHE_KEY];
+  if (postId) keys.push(`posts:${postId}`);
+
+  // Collect all search cache keys
+  for await (const batch of redis.scanIterator({
+    MATCH: 'posts:search:*',
+    COUNT: 100,
+  })) {
+    if (Array.isArray(batch)) {
+      keys.push(...batch);
+    } else {
+      keys.push(batch);
+    }
+  }
+
+  await Promise.all(keys.map((key) => redis.del(key)));
+}
+
+// GET /api/posts/search - Search posts via Typesense (cached)
 export const searchPosts = async (req: Request, res: Response) => {
   try {
     const q = (req.query.q as string) || '*';
     const page = Math.max(1, Number(req.query.page) || 1);
-    const perPage = Math.min(100, Math.max(1, Number(req.query.per_page) || 10));
+    const perPage = Math.min(
+      100,
+      Math.max(1, Number(req.query.per_page) || 10),
+    );
+
+    // Cache key derived from query parameters
+    const cacheKey = `posts:search:${q}:${page}:${perPage}`;
+
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      res.status(200).json({ ...JSON.parse(cached), source: 'cache' });
+      return;
+    }
 
     const results = await typesenseClient
       .collections(POSTS_COLLECTION)
@@ -29,7 +60,7 @@ export const searchPosts = async (req: Request, res: Response) => {
         highlight_full_fields: 'title,content',
       });
 
-    res.status(200).json({
+    const responseBody = {
       query: q,
       found: results.found,
       page: results.page,
@@ -37,7 +68,13 @@ export const searchPosts = async (req: Request, res: Response) => {
         document: hit.document,
         highlights: hit.highlights,
       })),
+    };
+
+    await redis.set(cacheKey, JSON.stringify(responseBody), {
+      EX: CACHE_TTL_SECONDS,
     });
+
+    res.status(200).json({ ...responseBody, source: 'typesense' });
   } catch (error) {
     console.error('Error searching posts:', error);
     res.status(500).json({ error: 'Failed to search posts' });
@@ -169,7 +206,7 @@ export const createPost = async (req: Request, res: Response) => {
       console.warn('Failed to sync post to Typesense:', tsError);
     }
 
-    await redis.del(ALL_POSTS_CACHE_KEY);
+    await invalidatePostCaches();
 
     res.status(201).json({ post });
   } catch (error) {
@@ -226,7 +263,7 @@ export const updatePost = async (req: Request, res: Response) => {
       console.warn('Failed to sync post update to Typesense:', tsError);
     }
 
-    await redis.del([ALL_POSTS_CACHE_KEY, `posts:${postId}`]);
+    await invalidatePostCaches(postId);
 
     res.status(200).json({ post });
   } catch (error) {
@@ -270,7 +307,7 @@ export const deletePost = async (req: Request, res: Response) => {
       console.warn('Failed to sync post deletion to Typesense:', tsError);
     }
 
-    await redis.del([ALL_POSTS_CACHE_KEY, `posts:${postId}`]);
+    await invalidatePostCaches(postId);
 
     res.status(204).send();
   } catch (error) {
