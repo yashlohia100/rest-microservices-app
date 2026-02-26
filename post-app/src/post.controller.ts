@@ -50,7 +50,7 @@ export const getAllPosts = async (req: Request, res: Response) => {
     // Check cache first
     const cached = await redis.get(ALL_POSTS_CACHE_KEY);
     if (cached) {
-      res.status(200).json(JSON.parse(cached));
+      res.status(200).json({ ...JSON.parse(cached), source: 'cache' });
       return;
     }
 
@@ -66,17 +66,25 @@ export const getAllPosts = async (req: Request, res: Response) => {
       EX: CACHE_TTL_SECONDS,
     });
 
-    res.status(200).json(responseBody);
+    res.status(200).json({ ...responseBody, source: 'database' });
   } catch (error) {
     console.error('Error fetching posts:', error);
     res.status(500).json({ error: 'Failed to fetch posts' });
   }
 };
 
-// GET /api/posts/:postId - Get a single post with author details
+// GET /api/posts/:postId - Get a single post with author details (cached)
 export const getPost = async (req: Request, res: Response) => {
   try {
     const postId = req.params.postId as string;
+    const cacheKey = `posts:${postId}`;
+
+    // Check cache first
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      res.status(200).json({ ...JSON.parse(cached), source: 'cache' });
+      return;
+    }
 
     const post = await prisma.post.findUnique({
       where: { id: postId },
@@ -98,12 +106,14 @@ export const getPost = async (req: Request, res: Response) => {
       console.warn(`Could not fetch author for post ${postId}`);
     }
 
-    res.status(200).json({
-      post: {
-        ...post,
-        author,
-      },
+    const responseBody = { post: { ...post, author } };
+
+    // Store in cache with TTL
+    await redis.set(cacheKey, JSON.stringify(responseBody), {
+      EX: CACHE_TTL_SECONDS,
     });
+
+    res.status(200).json({ ...responseBody, source: 'database' });
   } catch (error) {
     console.error('Error fetching post:', error);
     res.status(500).json({ error: 'Failed to fetch post' });
@@ -216,7 +226,7 @@ export const updatePost = async (req: Request, res: Response) => {
       console.warn('Failed to sync post update to Typesense:', tsError);
     }
 
-    await redis.del(ALL_POSTS_CACHE_KEY);
+    await redis.del([ALL_POSTS_CACHE_KEY, `posts:${postId}`]);
 
     res.status(200).json({ post });
   } catch (error) {
@@ -260,7 +270,7 @@ export const deletePost = async (req: Request, res: Response) => {
       console.warn('Failed to sync post deletion to Typesense:', tsError);
     }
 
-    await redis.del(ALL_POSTS_CACHE_KEY);
+    await redis.del([ALL_POSTS_CACHE_KEY, `posts:${postId}`]);
 
     res.status(204).send();
   } catch (error) {
