@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import axios from 'axios';
 import { prisma } from './database/prisma.js';
+import { addWelcomeEmailJob } from './queues/email.queue.js';
 
 const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL;
 const SALT_ROUNDS = 10;
@@ -78,6 +79,13 @@ export const signup = async (req: Request, res: Response) => {
     );
 
     const { token } = tokenResponse.data;
+
+    // Queue welcome email asynchronously
+    await addWelcomeEmailJob({
+      userId: user.id,
+      name: user.name,
+      email: user.email,
+    });
 
     // Send response without the password
     res.status(201).json({
