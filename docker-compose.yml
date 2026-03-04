@@ -1,27 +1,40 @@
 services:
+  postgres:
+    image: postgres:18
+    ports:
+      - '5435:5432'
+    environment:
+      POSTGRES_PASSWORD: ago_gate_shells
+    volumes:
+      - postgres_data:/var/lib/postgresql
+
   typesense:
     image: typesense/typesense:27.1
     ports:
-      - "8108:8108"
+      - '8108:8108'
     volumes:
       - typesense_data:/data
-    command: "--data-dir=/data --api-key=xyz --enable-cors"
+    command: '--data-dir=/data --api-key=iron_continued_slow --enable-cors'
 
   redis:
-    image: redis:7-alpine
+    image: redis:8.6
     ports:
-      - "6379:6379"
+      - '6379:6379'
     volumes:
       - redis_data:/data
 
   mongodb:
     image: mongo:8
     ports:
-      - "27017:27017"
+      - '27020:27017'
     volumes:
       - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongo
+      MONGO_INITDB_ROOT_PASSWORD: itself_branch_story
 
 volumes:
+  postgres_data:
   typesense_data:
   redis_data:
   mongodb_data:
