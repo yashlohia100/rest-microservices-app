@@ -1,0 +1,49 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug auth-service",
+      "runtimeExecutable": "${workspaceFolder}/auth-service/node_modules/.bin/tsx",
+      "args": ["src/server.ts"],
+      "cwd": "${workspaceFolder}/auth-service",
+      "envFile": "${workspaceFolder}/auth-service/.env",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug user-app",
+      "runtimeExecutable": "${workspaceFolder}/user-app/node_modules/.bin/tsx",
+      "args": ["src/server.ts"],
+      "cwd": "${workspaceFolder}/user-app",
+      "envFile": "${workspaceFolder}/user-app/.env",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug post-app",
+      "runtimeExecutable": "${workspaceFolder}/post-app/node_modules/.bin/tsx",
+      "args": ["src/server.ts"],
+      "cwd": "${workspaceFolder}/post-app",
+      "envFile": "${workspaceFolder}/post-app/.env",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug event-service",
+      "runtimeExecutable": "${workspaceFolder}/event-service/node_modules/.bin/tsx",
+      "args": ["src/server.ts"],
+      "cwd": "${workspaceFolder}/event-service",
+      "envFile": "${workspaceFolder}/event-service/.env",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ]
+}
