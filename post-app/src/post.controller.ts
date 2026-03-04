@@ -6,6 +6,7 @@ import { typesenseClient } from './typesense/client.js';
 import { POSTS_COLLECTION } from './typesense/posts.collection.js';
 
 const USER_SERVICE_URL = process.env.USER_SERVICE_URL;
+const EVENT_SERVICE_URL = process.env.EVENT_SERVICE_URL;
 const ALL_POSTS_CACHE_KEY = 'posts:all';
 const CACHE_TTL_SECONDS = 60;
 
@@ -208,6 +209,23 @@ export const createPost = async (req: Request, res: Response) => {
 
     await invalidatePostCaches();
 
+    // Send postCreated event
+    try {
+      await axios.post(`${EVENT_SERVICE_URL}/api/events`, {
+        type: 'postCreated',
+        serviceName: 'postService',
+        sourceId: post.id,
+        data: {
+          id: post.id,
+          title: post.title,
+          authorId: post.authorId,
+          published: post.published,
+        },
+      });
+    } catch {
+      console.warn('Failed to send postCreated event');
+    }
+
     res.status(201).json({ post });
   } catch (error) {
     console.error('Error creating post:', error);
@@ -265,6 +283,23 @@ export const updatePost = async (req: Request, res: Response) => {
 
     await invalidatePostCaches(postId);
 
+    // Send postUpdated event
+    try {
+      await axios.post(`${EVENT_SERVICE_URL}/api/events`, {
+        type: 'postUpdated',
+        serviceName: 'postService',
+        sourceId: post.id,
+        data: {
+          id: post.id,
+          title: post.title,
+          authorId: post.authorId,
+          published: post.published,
+        },
+      });
+    } catch {
+      console.warn('Failed to send postUpdated event');
+    }
+
     res.status(200).json({ post });
   } catch (error) {
     console.error('Error updating post:', error);
@@ -308,6 +343,18 @@ export const deletePost = async (req: Request, res: Response) => {
     }
 
     await invalidatePostCaches(postId);
+
+    // Send postDeleted event
+    try {
+      await axios.post(`${EVENT_SERVICE_URL}/api/events`, {
+        type: 'postDeleted',
+        serviceName: 'postService',
+        sourceId: postId,
+        data: { id: postId, authorId: existingPost.authorId },
+      });
+    } catch {
+      console.warn('Failed to send postDeleted event');
+    }
 
     res.status(204).send();
   } catch (error) {

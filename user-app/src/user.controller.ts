@@ -1,10 +1,11 @@
-import { Request, Response } from 'express';
-import bcrypt from 'bcryptjs';
 import axios from 'axios';
+import bcrypt from 'bcryptjs';
+import { Request, Response } from 'express';
 import { prisma } from './database/prisma.js';
 import { addWelcomeEmailJob } from './queues/email.queue.js';
 
 const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL;
+const EVENT_SERVICE_URL = process.env.EVENT_SERVICE_URL;
 const SALT_ROUNDS = 10;
 
 // GET /api/users/:userId - Get user by ID (used by other microservices)
@@ -86,6 +87,23 @@ export const signup = async (req: Request, res: Response) => {
       name: user.name,
       email: user.email,
     });
+
+    // Send userCreated event to event-service
+    try {
+      await axios.post(`${EVENT_SERVICE_URL}/api/events`, {
+        type: 'userCreated',
+        serviceName: 'userService',
+        sourceId: user.id,
+        data: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          createdAt: user.createdAt,
+        },
+      });
+    } catch {
+      console.warn('Failed to send userCreated event');
+    }
 
     // Send response without the password
     res.status(201).json({
