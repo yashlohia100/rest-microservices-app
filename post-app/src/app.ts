@@ -1,8 +1,11 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
+import { collectDefaultMetrics, register } from 'prom-client';
 import RedisStore from 'rate-limit-redis';
 import { postRouter } from './post.routes.js';
 import { redis } from './redis/client.js';
+
+collectDefaultMetrics();
 
 const app = express();
 
@@ -25,6 +28,11 @@ function setupRateLimiter() {
 
 app.get('/', (req, res) => {
   res.status(200).send('Hello from the post-app.');
+});
+
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', register.contentType);
+  res.send(await register.metrics());
 });
 
 app.use('/api/posts', postRouter);

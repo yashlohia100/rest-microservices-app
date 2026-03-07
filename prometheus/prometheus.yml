@@ -1,0 +1,17 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: user-app
+    static_configs:
+      - targets: ['host.docker.internal:8000']
+  - job_name: post-app
+    static_configs:
+      - targets: ['host.docker.internal:9000']
+  - job_name: auth-service
+    static_configs:
+      - targets: ['host.docker.internal:11000']
+  - job_name: event-service
+    static_configs:
+      - targets:
+          - 'host.docker.internal:12000'
