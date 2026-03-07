@@ -8,17 +8,20 @@ const app = express();
 
 app.use(express.json());
 
-const rateLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 10, // limit each IP to 10 requests per windowMs
-  standardHeaders: 'draft-8',
+// Must be called after redis.connect() so the RedisStore can reach Redis
+function setupRateLimiter() {
+  const rateLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000,
+    max: 10,
+    standardHeaders: 'draft-8',
 
-  store: new RedisStore({
-    sendCommand: (...args: string[]) => redis.sendCommand(args),
-  }),
-});
+    store: new RedisStore({
+      sendCommand: (...args: string[]) => redis.sendCommand(args),
+    }),
+  });
 
-app.use(rateLimiter);
+  app.use(rateLimiter);
+}
 
 app.get('/', (req, res) => {
   res.status(200).send('Hello from the post-app.');
@@ -26,4 +29,4 @@ app.get('/', (req, res) => {
 
 app.use('/api/posts', postRouter);
 
-export { app };
+export { app, setupRateLimiter };

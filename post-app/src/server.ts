@@ -1,4 +1,4 @@
-import { app } from './app.js';
+import { app, setupRateLimiter } from './app.js';
 import { connectToDatabase } from './database/connectToDatabase.js';
 import { prisma } from './database/prisma.js';
 import { redis } from './redis/client.js';
@@ -10,7 +10,7 @@ async function start() {
   try {
     await connectToDatabase();
     await redis.connect();
-    console.log('Redis connected...');
+    setupRateLimiter();
     await initPostsCollection();
 
     app.listen(port, () => {
