@@ -1,13 +1,14 @@
 import { app } from './app.js';
+import { logger } from './logger.js';
 
 const port = process.env.PORT || 8080;
 
 app.listen(port, () => {
-  console.log(`Server is listening on port ${port}...`);
+  logger.info(`Server is listening on port ${port}...`);
 });
 
 async function shutdown() {
-  console.log('Shutting down...');
+  logger.info('Shutting down...');
   process.exit(0);
 }
 
