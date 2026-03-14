@@ -1,4 +1,5 @@
 import pino from 'pino';
+import { getContext } from './context.js';
 
 const isDev = process.env.NODE_ENV !== 'production';
 
@@ -9,6 +10,10 @@ const logger = pino({
     env: process.env.NODE_ENV,
   },
   level: process.env.LOG_LEVEL || 'info',
+  mixin() {
+    const ctx = getContext();
+    return ctx ? { requestId: ctx.requestId } : {};
+  },
   transport: isDev
     ? {
         target: 'pino-pretty',
