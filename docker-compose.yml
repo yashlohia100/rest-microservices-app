@@ -41,6 +41,26 @@ services:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
 
+  promtail:
+    image: grafana/promtail:latest
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./promtail/config.yml:/etc/promtail/config.yml
+      - ./auth-service/logs:/var/logs/auth-service
+      - ./event-service/logs:/var/logs/event-service
+      - ./user-app/logs:/var/logs/user-app
+      - ./post-app/logs:/var/logs/post-app
+
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - '3100:3100'
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - '3000:3000'
+
 volumes:
   postgres_data:
   typesense_data:
