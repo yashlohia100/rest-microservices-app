@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { app } from './app.js';
 import { connectToDatabase } from './database/connectToDatabase.js';
+import { logger } from './logger.js';
 
 const port = process.env.PORT || 8080;
 
@@ -9,7 +10,7 @@ async function start() {
     await connectToDatabase();
 
     app.listen(port, () => {
-      console.log(`Server is listening on port ${port}...`);
+      logger.info(`Server is listening on port ${port}...`);
     });
   } catch (error) {
     console.error('Startup failed. Exiting.');
@@ -20,7 +21,7 @@ async function start() {
 start();
 
 async function shutdown() {
-  console.log('Shutting down...');
+  logger.info('Shutting down...');
   await mongoose.disconnect();
   process.exit(0);
 }
