@@ -13,7 +13,7 @@ async function start() {
       logger.info(`Server is listening on port ${port}...`);
     });
   } catch (error) {
-    console.error('Startup failed. Exiting.');
+    logger.error(error, 'Startup failed. Exiting.');
     process.exit(1);
   }
 }

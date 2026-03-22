@@ -23,6 +23,7 @@ const requestTimeLogger = (req: Request, res: Response, next: NextFunction) => {
         method: req.method,
         url: req.originalUrl,
         durationMs,
+        statusCode: res.statusCode,
       },
       'Request finish',
     );

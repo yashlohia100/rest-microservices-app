@@ -1,6 +1,7 @@
 import { app, setupRateLimiter } from './app.js';
 import { connectToDatabase } from './database/connectToDatabase.js';
 import { prisma } from './database/prisma.js';
+import { logger } from './logger.js';
 import { redis } from './redis/client.js';
 import { initPostsCollection } from './typesense/posts.collection.js';
 
@@ -14,10 +15,10 @@ async function start() {
     await initPostsCollection();
 
     app.listen(port, () => {
-      console.log(`Server is listening on port ${port}...`);
+      logger.info(`Server is listening on port ${port}...`);
     });
   } catch (error) {
-    console.error('Startup failed. Exiting.');
+    logger.error(error, 'Startup failed. Exiting.');
     process.exit(1);
   }
 }
@@ -25,7 +26,7 @@ async function start() {
 start();
 
 async function shutdown() {
-  console.log('Shutting down...');
+  logger.info('Shutting down...');
   await redis.quit();
   await prisma.$disconnect();
   process.exit(0);
