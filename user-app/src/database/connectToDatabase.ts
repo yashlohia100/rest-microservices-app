@@ -1,11 +1,12 @@
+import { logger } from '../logger.js';
 import { prisma } from './prisma.js';
 
 export async function connectToDatabase() {
   try {
     await prisma.$queryRaw`SELECT 1`;
-    console.log('Database connected...');
+    logger.info('Database connected...');
   } catch (error) {
-    console.error('Error connecting database:', error);
+    logger.error(error, 'Error connecting database');
     throw error;
   }
 }

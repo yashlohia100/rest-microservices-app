@@ -1,6 +1,7 @@
 import { app } from './app.js';
 import { connectToDatabase } from './database/connectToDatabase.js';
 import { prisma } from './database/prisma.js';
+import { logger } from './logger.js';
 import { emailQueue } from './queues/email.queue.js';
 import { emailWorker } from './workers/email.worker.js';
 
@@ -10,13 +11,13 @@ async function start() {
   try {
     await connectToDatabase();
 
-    console.log('Email worker started...');
+    logger.info('Email worker started...');
 
     app.listen(port, () => {
-      console.log(`Server is listening on port ${port}...`);
+      logger.info(`Server is listening on port ${port}...`);
     });
   } catch (error) {
-    console.error('Startup failed. Exiting.');
+    logger.error('Startup failed. Exiting.');
     process.exit(1);
   }
 }
@@ -24,7 +25,7 @@ async function start() {
 start();
 
 async function shutdown() {
-  console.log('Shutting down...');
+  logger.info('Shutting down...');
   await emailWorker.close();
   await emailQueue.close();
   await prisma.$disconnect();
