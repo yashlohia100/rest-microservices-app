@@ -1,6 +1,6 @@
-import axios from 'axios';
 import bcrypt from 'bcryptjs';
 import { Request, Response } from 'express';
+import { axiosInstance as axios } from './axiosInstance.js';
 import { prisma } from './database/prisma.js';
 import { logger } from './logger.js';
 import { addWelcomeEmailJob } from './queues/email.queue.js';
@@ -192,7 +192,6 @@ export const login = async (req: Request, res: Response) => {
     }
 
     // Generate JWT token via auth microservice
-    // TODO: Send requestId when making request
     const tokenResponse = await axios.post(
       `${AUTH_SERVICE_URL}/api/auth/generate-token`,
       { userId: user.id },
