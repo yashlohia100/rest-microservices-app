@@ -1,5 +1,6 @@
-import { Request, Response, NextFunction } from 'express';
 import axios from 'axios';
+import { NextFunction, Request, Response } from 'express';
+import { axiosInstance } from './axiosInstance.js';
 
 const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL;
 
@@ -19,7 +20,7 @@ export const authMiddleware = async (
     const token = authHeader.split(' ')[1];
 
     // Verify token via auth microservice
-    const response = await axios.post(
+    const response = await axiosInstance.post(
       `${AUTH_SERVICE_URL}/api/auth/verify-token`,
       { token },
     );

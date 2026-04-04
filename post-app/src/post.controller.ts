@@ -1,5 +1,5 @@
-import axios from 'axios';
 import { Request, Response } from 'express';
+import { axiosInstance as axios } from './axiosInstance.js';
 import { prisma } from './database/prisma.js';
 import { redis } from './redis/client.js';
 import { typesenseClient } from './typesense/client.js';
