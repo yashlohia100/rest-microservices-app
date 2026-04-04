@@ -1,4 +1,5 @@
 import { CollectionCreateSchema } from 'typesense/lib/Typesense/Collections.js';
+import { logger } from '../logger.js';
 import { typesenseClient } from './client.js';
 
 const POSTS_COLLECTION = 'posts';
@@ -19,13 +20,13 @@ const postsSchema: CollectionCreateSchema = {
 export async function initPostsCollection() {
   try {
     await typesenseClient.collections(POSTS_COLLECTION).retrieve();
-    console.log(`Typesense collection "${POSTS_COLLECTION}" already exists.`);
+    logger.info(`Typesense collection "${POSTS_COLLECTION}" already exists`);
   } catch (error: unknown) {
     const statusCode = (error as { httpStatus?: number }).httpStatus;
 
     if (statusCode === 404) {
       await typesenseClient.collections().create(postsSchema);
-      console.log(`Typesense collection "${POSTS_COLLECTION}" created.`);
+      logger.info(`Typesense collection "${POSTS_COLLECTION}" created`);
     } else {
       throw error;
     }

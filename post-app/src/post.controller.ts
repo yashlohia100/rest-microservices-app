@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { axiosInstance as axios } from './axiosInstance.js';
 import { prisma } from './database/prisma.js';
+import { logger } from './logger.js';
 import { redis } from './redis/client.js';
 import { typesenseClient } from './typesense/client.js';
 import { POSTS_COLLECTION } from './typesense/posts.collection.js';
@@ -27,6 +28,7 @@ async function invalidatePostCaches(postId?: string) {
   }
 
   await Promise.all(keys.map((key) => redis.del(key)));
+  logger.debug({ keys }, 'Invalidated post caches');
 }
 
 // GET /api/posts/search - Search posts via Typesense (cached)
@@ -39,14 +41,19 @@ export const searchPosts = async (req: Request, res: Response) => {
       Math.max(1, Number(req.query.per_page) || 10),
     );
 
+    logger.debug({ q, page, perPage }, 'Searching posts');
+
     // Cache key derived from query parameters
     const cacheKey = `posts:search:${q}:${page}:${perPage}`;
 
     const cached = await redis.get(cacheKey);
     if (cached) {
+      logger.debug({ cacheKey }, 'Search cache hit');
       res.status(200).json({ ...JSON.parse(cached), source: 'cache' });
       return;
     }
+
+    logger.debug({ cacheKey }, 'Search cache miss, querying Typesense');
 
     const results = await typesenseClient
       .collections(POSTS_COLLECTION)
@@ -75,9 +82,11 @@ export const searchPosts = async (req: Request, res: Response) => {
       EX: CACHE_TTL_SECONDS,
     });
 
+    logger.debug({ found: results.found }, 'Search results cached');
+
     res.status(200).json({ ...responseBody, source: 'typesense' });
   } catch (error) {
-    console.error('Error searching posts:', error);
+    logger.error(error, 'Error searching posts');
     res.status(500).json({ error: 'Failed to search posts' });
   }
 };
@@ -85,12 +94,17 @@ export const searchPosts = async (req: Request, res: Response) => {
 // GET /api/posts - Get all published posts (cached)
 export const getAllPosts = async (req: Request, res: Response) => {
   try {
+    logger.debug('Fetching all published posts');
+
     // Check cache first
     const cached = await redis.get(ALL_POSTS_CACHE_KEY);
     if (cached) {
+      logger.debug('All posts cache hit');
       res.status(200).json({ ...JSON.parse(cached), source: 'cache' });
       return;
     }
+
+    logger.debug('All posts cache miss, querying database');
 
     const posts = await prisma.post.findMany({
       where: { published: true },
@@ -104,9 +118,14 @@ export const getAllPosts = async (req: Request, res: Response) => {
       EX: CACHE_TTL_SECONDS,
     });
 
+    logger.debug(
+      { count: posts.length },
+      'Fetched posts from database and cached',
+    );
+
     res.status(200).json({ ...responseBody, source: 'database' });
   } catch (error) {
-    console.error('Error fetching posts:', error);
+    logger.error(error, 'Error fetching posts');
     res.status(500).json({ error: 'Failed to fetch posts' });
   }
 };
@@ -117,18 +136,24 @@ export const getPost = async (req: Request, res: Response) => {
     const postId = req.params.postId as string;
     const cacheKey = `posts:${postId}`;
 
+    logger.debug({ postId }, 'Fetching post');
+
     // Check cache first
     const cached = await redis.get(cacheKey);
     if (cached) {
+      logger.debug({ postId }, 'Post cache hit');
       res.status(200).json({ ...JSON.parse(cached), source: 'cache' });
       return;
     }
+
+    logger.debug({ postId }, 'Post cache miss, querying database');
 
     const post = await prisma.post.findUnique({
       where: { id: postId },
     });
 
     if (!post) {
+      logger.debug({ postId }, 'Post not found');
       res.status(404).json({ error: 'Post not found' });
       return;
     }
@@ -140,8 +165,15 @@ export const getPost = async (req: Request, res: Response) => {
         `${USER_SERVICE_URL}/api/users/${post.authorId}`,
       );
       author = userResponse.data.user;
+      logger.debug(
+        { authorId: post.authorId },
+        'Fetched author from user-service',
+      );
     } catch {
-      console.warn(`Could not fetch author for post ${postId}`);
+      logger.warn(
+        { postId, authorId: post.authorId },
+        'Could not fetch author from user-service',
+      );
     }
 
     const responseBody = { post: { ...post, author } };
@@ -153,7 +185,7 @@ export const getPost = async (req: Request, res: Response) => {
 
     res.status(200).json({ ...responseBody, source: 'database' });
   } catch (error) {
-    console.error('Error fetching post:', error);
+    logger.error(error, 'Error fetching post');
     res.status(500).json({ error: 'Failed to fetch post' });
   }
 };
@@ -163,6 +195,8 @@ export const createPost = async (req: Request, res: Response) => {
   try {
     const { title, content, published } = req.body;
     const authorId = req.user!.id;
+
+    logger.debug({ authorId }, 'Creating post');
 
     if (!title || !content) {
       res.status(400).json({ error: 'title and content are required' });
@@ -178,6 +212,8 @@ export const createPost = async (req: Request, res: Response) => {
       },
     });
 
+    logger.info({ postId: post.id, authorId }, 'Post created');
+
     // Sync to Typesense
     try {
       let authorName: string | undefined;
@@ -187,7 +223,10 @@ export const createPost = async (req: Request, res: Response) => {
         );
         authorName = userResponse.data.user.name;
       } catch {
-        console.warn('Could not fetch author name for Typesense sync');
+        logger.warn(
+          { authorId },
+          'Could not fetch author name for Typesense sync',
+        );
       }
 
       await typesenseClient
@@ -203,8 +242,9 @@ export const createPost = async (req: Request, res: Response) => {
           createdAt: post.createdAt.getTime(),
           updatedAt: post.updatedAt.getTime(),
         });
+      logger.debug({ postId: post.id }, 'Post synced to Typesense');
     } catch (tsError) {
-      console.warn('Failed to sync post to Typesense:', tsError);
+      logger.warn(tsError, 'Failed to sync post to Typesense');
     }
 
     await invalidatePostCaches();
@@ -222,13 +262,14 @@ export const createPost = async (req: Request, res: Response) => {
           published: post.published,
         },
       });
+      logger.debug({ postId: post.id }, 'postCreated event sent');
     } catch {
-      console.warn('Failed to send postCreated event');
+      logger.warn({ postId: post.id }, 'Failed to send postCreated event');
     }
 
     res.status(201).json({ post });
   } catch (error) {
-    console.error('Error creating post:', error);
+    logger.error(error, 'Error creating post');
     res.status(500).json({ error: 'Failed to create post' });
   }
 };
@@ -239,17 +280,24 @@ export const updatePost = async (req: Request, res: Response) => {
     const postId = req.params.postId as string;
     const userId = req.user!.id;
 
+    logger.debug({ postId, userId }, 'Updating post');
+
     // Check if post exists and belongs to the user
     const existingPost = await prisma.post.findUnique({
       where: { id: postId },
     });
 
     if (!existingPost) {
+      logger.debug({ postId }, 'Post not found');
       res.status(404).json({ error: 'Post not found' });
       return;
     }
 
     if (existingPost.authorId !== userId) {
+      logger.warn(
+        { postId, userId, authorId: existingPost.authorId },
+        'Unauthorized update attempt',
+      );
       res.status(403).json({ error: 'You can only update your own posts' });
       return;
     }
@@ -266,6 +314,8 @@ export const updatePost = async (req: Request, res: Response) => {
       },
     });
 
+    logger.info({ postId }, 'Post updated');
+
     // Sync to Typesense
     try {
       await typesenseClient
@@ -277,8 +327,9 @@ export const updatePost = async (req: Request, res: Response) => {
           ...(published !== undefined && { published }),
           updatedAt: post.updatedAt.getTime(),
         });
+      logger.debug({ postId }, 'Post update synced to Typesense');
     } catch (tsError) {
-      console.warn('Failed to sync post update to Typesense:', tsError);
+      logger.warn(tsError, 'Failed to sync post update to Typesense');
     }
 
     await invalidatePostCaches(postId);
@@ -296,13 +347,14 @@ export const updatePost = async (req: Request, res: Response) => {
           published: post.published,
         },
       });
+      logger.debug({ postId }, 'postUpdated event sent');
     } catch {
-      console.warn('Failed to send postUpdated event');
+      logger.warn({ postId }, 'Failed to send postUpdated event');
     }
 
     res.status(200).json({ post });
   } catch (error) {
-    console.error('Error updating post:', error);
+    logger.error(error, 'Error updating post');
     res.status(500).json({ error: 'Failed to update post' });
   }
 };
@@ -313,17 +365,24 @@ export const deletePost = async (req: Request, res: Response) => {
     const postId = req.params.postId as string;
     const userId = req.user!.id;
 
+    logger.debug({ postId, userId }, 'Deleting post');
+
     // Check if post exists and belongs to the user
     const existingPost = await prisma.post.findUnique({
       where: { id: postId },
     });
 
     if (!existingPost) {
+      logger.debug({ postId }, 'Post not found');
       res.status(404).json({ error: 'Post not found' });
       return;
     }
 
     if (existingPost.authorId !== userId) {
+      logger.warn(
+        { postId, userId, authorId: existingPost.authorId },
+        'Unauthorized delete attempt',
+      );
       res.status(403).json({ error: 'You can only delete your own posts' });
       return;
     }
@@ -332,14 +391,17 @@ export const deletePost = async (req: Request, res: Response) => {
       where: { id: postId },
     });
 
+    logger.info({ postId }, 'Post deleted');
+
     // Sync to Typesense
     try {
       await typesenseClient
         .collections(POSTS_COLLECTION)
         .documents(postId)
         .delete();
+      logger.debug({ postId }, 'Post deletion synced to Typesense');
     } catch (tsError) {
-      console.warn('Failed to sync post deletion to Typesense:', tsError);
+      logger.warn(tsError, 'Failed to sync post deletion to Typesense');
     }
 
     await invalidatePostCaches(postId);
@@ -352,13 +414,14 @@ export const deletePost = async (req: Request, res: Response) => {
         sourceId: postId,
         data: { id: postId, authorId: existingPost.authorId },
       });
+      logger.debug({ postId }, 'postDeleted event sent');
     } catch {
-      console.warn('Failed to send postDeleted event');
+      logger.warn({ postId }, 'Failed to send postDeleted event');
     }
 
     res.status(204).send();
   } catch (error) {
-    console.error('Error deleting post:', error);
+    logger.error(error, 'Error deleting post');
     res.status(500).json({ error: 'Failed to delete post' });
   }
 };
