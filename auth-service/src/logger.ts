@@ -1,6 +1,12 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import pino from 'pino';
 import { getContext } from './context.js';
+
+const logsDir = path.join(process.cwd(), 'logs');
+if (!fs.existsSync(logsDir)) {
+  fs.mkdirSync(logsDir, { recursive: true });
+}
 
 const isDev = process.env.NODE_ENV !== 'production';
 
