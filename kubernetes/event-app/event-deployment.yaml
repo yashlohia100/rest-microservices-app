@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: event-app
+spec:
+  selector:
+    matchLabels:
+      app: event-app
+  template:
+    metadata:
+      labels:
+        app: event-app
+    spec:
+      containers:
+        - name: event-app
+          image: event-app:latest
+          resources:
+            limits:
+              memory: '128Mi'
+              cpu: '500m'
+          ports:
+            - containerPort: 12000
+              name: event-app
+          envFrom:
+            - configMapRef:
+                name: event-config
+            - secretRef:
+                name: event-secret

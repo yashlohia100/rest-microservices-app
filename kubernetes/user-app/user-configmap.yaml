@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-config
+data:
+  NODE_ENV: development
+  LOG_LEVEL: debug
+  PORT: '8000'
+  AUTH_SERVICE_URL: 'http://localhost:11000'
+  EVENT_SERVICE_URL: 'http://localhost:12000'
+  REDIS_HOST: 'localhost'
+  REDIS_PORT: '6379'

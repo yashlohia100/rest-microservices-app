@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: post-app
+spec:
+  selector:
+    matchLabels:
+      app: post-app
+  template:
+    metadata:
+      labels:
+        app: post-app
+    spec:
+      containers:
+        - name: post-app
+          image: post-app:latest
+          resources:
+            limits:
+              memory: '128Mi'
+              cpu: '500m'
+          ports:
+            - containerPort: 9000
+              name: post-app
+          envFrom:
+            - configMapRef:
+                name: post-config
+            - secretRef:
+                name: post-secret

@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: post-app
+spec:
+  selector:
+    app: post-app
+  ports:
+    - port: 9000
+      targetPort: post-app
