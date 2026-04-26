@@ -4,14 +4,29 @@ global:
 scrape_configs:
   - job_name: user-app
     static_configs:
-      - targets: ['host.docker.internal:8000']
+      - targets: ['user-app:8000']
   - job_name: post-app
     static_configs:
-      - targets: ['host.docker.internal:9000']
+      - targets: ['post-app:9000']
   - job_name: auth-service
     static_configs:
-      - targets: ['host.docker.internal:11000']
+      - targets: ['auth-app:11000']
   - job_name: event-service
     static_configs:
       - targets:
-          - 'host.docker.internal:12000'
+          - 'event-app:12000'
+
+# scrape_configs:
+#   - job_name: user-app
+#     static_configs:
+#       - targets: ['host.docker.internal:8000']
+#   - job_name: post-app
+#     static_configs:
+#       - targets: ['host.docker.internal:9000']
+#   - job_name: auth-service
+#     static_configs:
+#       - targets: ['host.docker.internal:11000']
+#   - job_name: event-service
+#     static_configs:
+#       - targets:
+#           - 'host.docker.internal:12000'

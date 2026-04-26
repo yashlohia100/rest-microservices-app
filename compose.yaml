@@ -1,0 +1,121 @@
+services:
+  auth-app:
+    build: ./auth-service
+    environment:
+      - NODE_ENV=development
+      - PORT=11000
+      - JWT_SECRET=Shaking-Develop-Drew-Your8-Silent
+      - LOG_LEVEL=debug
+    volumes:
+      - './auth-service/logs:/app/logs:rw'
+
+  mongodb:
+    image: mongo:8
+    # No need to expose ports, we are using docker internal network
+    # ports:
+    #   - '27020:27017'
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongo
+      MONGO_INITDB_ROOT_PASSWORD: itself_branch_story
+
+  event-app:
+    build: ./event-service
+    environment:
+      - NODE_ENV='development'
+      - PORT=12000
+      - DATABASE_URL='mongodb://mongo:itself_branch_story@mongodb:27017/event-service?authSource=admin'
+      - LOG_LEVEL='debug'
+    volumes:
+      - './event-service/logs:/app/logs:rw'
+
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_PASSWORD: ago_gate_shells
+    volumes:
+      - postgres_data:/var/lib/postgresql
+
+  redis:
+    image: redis:8.6
+    volumes:
+      - redis_data:/data
+
+  user-app:
+    build: ./user-app
+    ports:
+      - '8000:8000'
+    environment:
+      - NODE_ENV=development
+      - LOG_LEVEL=debug
+      - PORT=8000
+      - DATABASE_URL="postgresql://postgres:ago_gate_shells@postgres:5432/user-app-db?schema=public"
+      - AUTH_SERVICE_URL="http://auth-app:11000"
+      - EVENT_SERVICE_URL="http://event-app:12000"
+      - REDIS_HOST="redis"
+      - REDIS_PORT=6379
+    volumes:
+      - './user-app/logs:/app/logs:rw'
+
+  typesense:
+    image: typesense/typesense:27.1
+    # ports:
+    #   - '8108:8108'
+    volumes:
+      - typesense_data:/data
+    command: '--data-dir=/data --api-key=iron_continued_slow --enable-cors'
+
+  post-app:
+    build: ./post-app
+    ports:
+      - '9000:9000'
+    environment:
+      - NODE_ENV='development'
+      - LOG_LEVEL='debug'
+      - PORT=9000
+      - DATABASE_URL="postgresql://postgres:ago_gate_shells@postgres:5432/post-app-db?schema=public"
+      - AUTH_SERVICE_URL="http://auth-app:11000"
+      - USER_SERVICE_URL="http://user-app:8000"
+      - EVENT_SERVICE_URL="http://event-app:12000"
+      - TYPESENSE_HOST="typesense"
+      - TYPESENSE_PORT=8108
+      - TYPESENSE_API_KEY="iron_continued_slow"
+      - REDIS_URL="redis://redis:6379"
+    volumes:
+      - './post-app/logs:/app/logs:rw'
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - '9090:9090'
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+
+  promtail:
+    image: grafana/promtail:latest
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./promtail/config.yml:/etc/promtail/config.yml
+      - ./auth-service/logs:/var/logs/auth-service
+      - ./event-service/logs:/var/logs/event-service
+      - ./user-app/logs:/var/logs/user-app
+      - ./post-app/logs:/var/logs/post-app
+
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - '3100:3100'
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - '3000:3000'
+
+volumes:
+  postgres_data:
+  typesense_data:
+  redis_data:
+  mongodb_data:
+  prometheus_data:
