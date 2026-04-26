@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: typesense
+  namespace: typesense
+spec:
+  serviceName: typesense
+  replicas: 1
+  selector:
+    matchLabels:
+      app: typesense
+  template:
+    metadata:
+      labels:
+        app: typesense
+    spec:
+      containers:
+        - name: typesense
+          image: typesense/typesense:27.1
+          ports:
+            - containerPort: 8108
+              name: typesense
+          volumeMounts:
+            - name: typesense-data
+              mountPath: /data
+          command:
+            - '--data-dir=/data --api-key=iron_continued_slow --enable-cors'
+  volumeClaimTemplates:
+    - metadata:
+        name: typesense-data
+      spec:
+        accessModes: ['ReadWriteOnce']
+        resources:
+          requests:
+            storage: 1Gi
