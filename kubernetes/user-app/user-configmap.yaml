@@ -2,6 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: user-config
+  namespace: user-app
 data:
   NODE_ENV: development
   LOG_LEVEL: debug
