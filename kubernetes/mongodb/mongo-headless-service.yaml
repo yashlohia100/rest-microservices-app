@@ -3,9 +3,14 @@ kind: Service
 metadata:
   name: mongo
   namespace: mongodb
+  labels:
+    app: mongo
 spec:
   clusterIP: None # This makes the service headless
   selector:
     app: mongo
   ports:
     - port: 27017
+      name: mongo
+    - port: 9216
+      name: metrics
