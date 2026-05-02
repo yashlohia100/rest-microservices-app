@@ -26,6 +26,30 @@ spec:
           volumeMounts:
             - name: mongo-data
               mountPath: /data/db
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              memory: "512Mi"
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - mongosh --eval "db.adminCommand('ping')" --username $MONGO_INITDB_ROOT_USERNAME --password $MONGO_INITDB_ROOT_PASSWORD --quiet
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - mongosh --eval "db.adminCommand('ping')" --username $MONGO_INITDB_ROOT_USERNAME --password $MONGO_INITDB_ROOT_PASSWORD --quiet
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            failureThreshold: 3
   volumeClaimTemplates:
     - metadata:
         name: mongo-data

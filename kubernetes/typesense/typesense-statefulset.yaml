@@ -23,8 +23,33 @@ spec:
           volumeMounts:
             - name: typesense-data
               mountPath: /data
-          command:
-            - '--data-dir=/data --api-key=iron_continued_slow --enable-cors'
+          args:
+            - '--data-dir=/data'
+            - '--api-key=$(TYPESENSE_API_KEY)'
+            - '--enable-cors'
+          envFrom:
+            - secretRef:
+                name: typesense-secret
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              memory: "512Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8108
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8108
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            failureThreshold: 3
   volumeClaimTemplates:
     - metadata:
         name: typesense-data

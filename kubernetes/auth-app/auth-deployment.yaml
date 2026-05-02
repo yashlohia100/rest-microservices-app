@@ -15,6 +15,7 @@ spec:
       containers:
         - name: auth-app
           image: auth-app:latest
+          imagePullPolicy: IfNotPresent # For local development
           resources:
             limits:
               memory: '128Mi'

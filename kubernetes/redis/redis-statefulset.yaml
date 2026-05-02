@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: redis
+  namespace: redis
 spec:
   serviceName: redis
   replicas: 1
@@ -22,6 +23,38 @@ spec:
           volumeMounts:
             - name: redis-data
               mountPath: /data
+          # TODO: Consider adding password protection
+          # and AOF (Append Only File) persistence
+          # args:
+          #   - '--appendonly'
+          #   - 'yes'
+          #   - '--requirepass'
+          #   - '$(REDIS_PASSWORD)'
+          # envFrom:
+          #   - secretRef:
+          #       name: redis-secret
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              memory: "256Mi"
+          readinessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            failureThreshold: 3
   volumeClaimTemplates:
     - metadata:
         name: redis-data
