@@ -1,12 +1,10 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import pino from 'pino';
 import { getContext } from './context.js';
 
-const logsDir = path.join(process.cwd(), 'logs');
-if (!fs.existsSync(logsDir)) {
-  fs.mkdirSync(logsDir, { recursive: true });
-}
+// const logsDir = path.join(process.cwd(), 'logs');
+// if (!fs.existsSync(logsDir)) {
+//   fs.mkdirSync(logsDir, { recursive: true });
+// }
 
 const isDev = process.env.NODE_ENV !== 'production';
 
@@ -32,7 +30,7 @@ const logger = pino(
         }
       : undefined,
   },
-  pino.destination(path.join(process.cwd(), 'logs', 'auth-service.log')),
+  // pino.destination(path.join(process.cwd(), 'logs', 'auth-service.log')),
 );
 
 export { logger };
