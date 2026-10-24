@@ -24,7 +24,7 @@ RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev
 
 COPY --from=build /app/dist ./dist
 
-RUN mkdir -p logs && chown node:node logs
+# RUN mkdir -p logs && chown node:node logs
 
 USER node
 

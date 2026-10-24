@@ -1,13 +1,16 @@
+# docker compose up -d
+# docker compose up -d <service_name>
+
 services:
   auth-app:
     build: ./auth-service
     environment:
-      - NODE_ENV=development
-      - PORT=11000
-      - JWT_SECRET=Shaking-Develop-Drew-Your8-Silent
-      - LOG_LEVEL=debug
-    volumes:
-      - './auth-service/logs:/app/logs:rw'
+      NODE_ENV: production
+      PORT: 11000
+      JWT_SECRET: Shaking-Develop-Drew-Your8-Silent
+      LOG_LEVEL: debug
+    # volumes:
+    #   - './auth-service/logs:/app/logs:rw'
 
   mongodb:
     image: mongo:8
