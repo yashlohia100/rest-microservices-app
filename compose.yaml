@@ -117,10 +117,25 @@ services:
     ports:
       - '3100:3100'
 
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    command: ['--config=/etc/otelcol/config.yaml']
+    volumes:
+      - './otel-collector/config.yaml:/etc/otelcol/config.yaml'
+    # ports: ['4318:4318']   # only if you run apps on the host and want traces
+
+  tempo:
+    image: grafana/tempo:latest
+    command: ['-config.file=/etc/tempo.yaml']
+    volumes:
+      - './tempo/tempo.yaml:/etc/tempo.yaml'
+
   grafana:
     image: grafana/grafana:latest
     ports:
       - '3000:3000'
+    volumes:
+      - './grafana/provisioning:/etc/grafana/provisioning'
 
 volumes:
   postgres_data:
