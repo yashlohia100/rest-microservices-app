@@ -1,6 +1,7 @@
 import { app, setupRateLimiter } from './app.js';
 import { connectToDatabase } from './database/connectToDatabase.js';
 import { prisma } from './database/prisma.js';
+import { sdk } from './instrumentation.js';
 import { logger } from './logger.js';
 import { redis } from './redis/client.js';
 import { initPostsCollection } from './typesense/posts.collection.js';
@@ -29,6 +30,7 @@ async function shutdown() {
   logger.info('Shutting down...');
   await redis.quit();
   await prisma.$disconnect();
+  await sdk.shutdown(); // flush remaining spans
   process.exit(0);
 }
 
