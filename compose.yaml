@@ -2,13 +2,17 @@
 # docker compose up -d <service_name>
 
 services:
-  auth-app:
+  auth-service:
     build: ./auth-service
     environment:
       NODE_ENV: production
       PORT: 11000
       JWT_SECRET: Shaking-Develop-Drew-Your8-Silent
       LOG_LEVEL: debug
+      OTEL_SERVICE_NAME: auth-service
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_METRICS_EXPORTER: none # Prometheus handles metrics
+      OTEL_LOGS_EXPORTER: none # Loki handles logs
     # volumes:
     #   - './auth-service/logs:/app/logs:rw'
 
@@ -23,7 +27,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: mongo
       MONGO_INITDB_ROOT_PASSWORD: itself_branch_story
 
-  event-app:
+  event-service:
     build: ./event-service
     environment:
       NODE_ENV: 'production'

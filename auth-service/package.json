@@ -6,6 +6,7 @@
   "scripts": {
     "build": "tsc",
     "start": "npm run build && node --env-file=.env dist/src/server.js",
+    "start:otel": "npm run build && node --env-file=.env --experimental-loader=@opentelemetry/instrumentation/hook.mjs --import=./dist/src/instrumentation.js --enable-source-maps dist/src/server.js",
     "dev": "tsx watch --env-file=.env src/server.ts"
   },
   "keywords": [],

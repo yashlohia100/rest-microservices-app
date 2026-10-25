@@ -30,4 +30,4 @@ USER node
 
 EXPOSE 11000
 
-CMD [ "node", "--enable-source-maps", "dist/src/server.js" ]
+CMD [ "node", "--experimental-loader=@opentelemetry/instrumentation/hook.mjs", "--import=./dist/src/instrumentation.js", "--enable-source-maps", "dist/src/server.js" ]
