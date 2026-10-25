@@ -26,12 +26,14 @@ services:
   event-app:
     build: ./event-service
     environment:
-      - NODE_ENV='development'
-      - PORT=12000
-      - DATABASE_URL='mongodb://mongo:itself_branch_story@mongodb:27017/event-service?authSource=admin'
-      - LOG_LEVEL='debug'
-    volumes:
-      - './event-service/logs:/app/logs:rw'
+      NODE_ENV: 'production'
+      PORT: '12000'
+      DATABASE_URL: 'mongodb://mongo:itself_branch_story@mongodb:27017/event-service?authSource=admin'
+      LOG_LEVEL: 'debug'
+    # ports:
+    #   - '12000:12000'
+    # volumes:
+    #   - './event-service/logs:/app/logs:rw'
 
   postgres:
     image: postgres:18
