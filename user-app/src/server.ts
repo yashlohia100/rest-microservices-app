@@ -1,6 +1,7 @@
 import { app } from './app.js';
 import { connectToDatabase } from './database/connectToDatabase.js';
 import { prisma } from './database/prisma.js';
+import { sdk } from './instrumentation.js';
 import { logger } from './logger.js';
 import { emailQueue } from './queues/email.queue.js';
 import { emailWorker } from './workers/email.worker.js';
@@ -29,6 +30,7 @@ async function shutdown() {
   await emailWorker.close();
   await emailQueue.close();
   await prisma.$disconnect();
+  await sdk.shutdown(); // flush remaining spans
   process.exit(0);
 }
 
