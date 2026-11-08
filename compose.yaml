@@ -51,6 +51,13 @@ services:
       POSTGRES_PASSWORD: ago_gate_shells
     volumes:
       - postgres_data:/var/lib/postgresql
+      - ./postgres-init.sql:/docker-entrypoint-initdb.d/10-create-app-databases.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
 
   redis:
     image: redis:8.6
@@ -76,6 +83,9 @@ services:
       OTEL_LOGS_EXPORTER: 'none' # Loki handles logs
     # volumes:
     #   - './user-app/logs:/app/logs:rw'
+    depends_on:
+      user-app-migrate:
+        condition: service_completed_successfully
 
   typesense:
     image: typesense/typesense:27.1
@@ -107,6 +117,33 @@ services:
       OTEL_LOGS_EXPORTER: 'none' # Loki handles logs
     # volumes:
     #   - './post-app/logs:/app/logs:rw'
+    depends_on:
+      post-app-migrate:
+        condition: service_completed_successfully
+
+  user-app-migrate:
+    build:
+      context: ./user-app
+      target: build
+    environment:
+      DATABASE_URL: 'postgresql://postgres:ago_gate_shells@postgres:5432/user-app-db?schema=public'
+    command: ['./node_modules/.bin/prisma', 'migrate', 'deploy']
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
+  post-app-migrate:
+    build:
+      context: ./post-app
+      target: build
+    environment:
+      DATABASE_URL: 'postgresql://postgres:ago_gate_shells@postgres:5432/post-app-db?schema=public'
+    command: ['./node_modules/.bin/prisma', 'migrate', 'deploy']
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
 
   prometheus:
     image: prom/prometheus:latest
