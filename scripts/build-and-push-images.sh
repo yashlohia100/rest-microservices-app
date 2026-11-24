@@ -15,6 +15,13 @@ set -Eeuo pipefail
 #   DOCKERHUB_REPOSITORY  Image repository (default: yashlohia105/rest-msvc-app)
 #   DOCKER_PLATFORM       Build platform (default: linux/amd64)
 #   DRY_RUN=true          Print commands without building or pushing
+#
+# Examples:
+#   Preview without building or pushing
+#   DRY_RUN=true bash scripts/build-and-push-images.sh v1
+#  
+#   For an ARM64/Graviton Kubernetes host
+#   DOCKER_PLATFORM=linux/arm64 bash scripts/build-and-push-images.sh v1
 
 readonly DEFAULT_REPOSITORY="yashlohia105/rest-msvc-app"
 readonly DEFAULT_PLATFORM="linux/amd64"
