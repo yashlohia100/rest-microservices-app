@@ -4,8 +4,10 @@ metadata:
   name: auth-app
   namespace: auth-app
 spec:
+  type: ClusterIP
   selector:
     app: auth-app
   ports:
-    - port: 11000
-      targetPort: auth-app
+    - name: http
+      port: 11000
+      targetPort: http

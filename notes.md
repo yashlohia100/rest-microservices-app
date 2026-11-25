@@ -10,3 +10,10 @@ The basic setup is right in all four Dockerfiles: a multi-stage build, npm ci fr
 chmod +x install-docker.sh
 sudo ./install-docker.sh
 ```
+
+## Creating jwt secret
+
+```
+kubectl -n auth-app create secret generic auth-secret \
+  --from-literal=JWT_SECRET='replace-with-a-strong-secret'
+```

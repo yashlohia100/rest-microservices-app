@@ -4,6 +4,10 @@ metadata:
   name: auth-config
   namespace: auth-app
 data:
+  NODE_ENV: 'production'
   PORT: '11000'
-  NODE_ENV: 'development'
   LOG_LEVEL: 'debug'
+  OTEL_SERVICE_NAME: 'auth-service'
+  OTEL_EXPORTER_OTLP_ENDPOINT: 'http://otel-collector.observability:4318'
+  OTEL_METRICS_EXPORTER: 'none'
+  OTEL_LOGS_EXPORTER: 'none'

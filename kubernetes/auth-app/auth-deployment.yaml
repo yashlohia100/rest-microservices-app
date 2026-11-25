@@ -12,16 +12,39 @@ spec:
       labels:
         app: auth-app
     spec:
+      imagePullSecrets:
+        - name: dockerhub-regcred
       containers:
         - name: auth-app
-          image: auth-app:latest
+          image: yashlohia105/rest-msvc-app:auth-app-v1
           resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
             limits:
-              memory: '128Mi'
-              cpu: '500m'
+              cpu: 500m
+              memory: 256Mi
           ports:
             - containerPort: 11000
-              name: auth-app
+              name: http
+          startupProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 10
+            failureThreshold: 3
           envFrom:
             - configMapRef:
                 name: auth-config
