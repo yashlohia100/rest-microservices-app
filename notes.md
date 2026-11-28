@@ -17,3 +17,62 @@ sudo ./install-docker.sh
 kubectl -n auth-app create secret generic auth-secret \
   --from-literal=JWT_SECRET='replace-with-a-strong-secret'
 ```
+
+## Running build and push images script
+
+```
+docker login
+bash scripts/build-and-push-images.sh
+```
+
+### For versioned, immutable tags
+
+```
+bash scripts/build-and-push-images.sh v1
+```
+
+This produces tags such as: `yashlohia105/rest-msvc-app:auth-app-v1`
+
+### Useful options
+
+```
+# Preview without building or pushing
+DRY_RUN=true bash scripts/build-and-push-images.sh v1
+
+# For an ARM64/Graviton Kubernetes host
+DOCKER_PLATFORM=linux/arm64 bash scripts/build-and-push-images.sh v1
+```
+
+## Running install k8s tools script
+
+```
+chmod +x install-k8s-tools.sh
+./install-k8s-tools.sh
+```
+
+### Install specific versions
+
+```
+KUBECTL_VERSION=v1.31.5 \
+K3D_VERSION=v5.8.3 \
+./install-k8s-tools.sh
+```
+
+## Create a Kubernetes cluster
+
+```
+k3d cluster create dev-cluster
+```
+
+### Verify the cluster
+
+```
+kubectl get nodes
+kubectl get pods -A
+```
+
+### Delete the cluster
+
+```
+k3d cluster delete dev-cluster
+```
